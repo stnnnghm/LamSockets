@@ -29,6 +29,7 @@ func echo(ctx context.Context, event events.APIGatewayWebsocketProxyRequest, sto
 
 	body := event.Body
 	resp := fmt.Sprintf("Echo me: %v", body)
+
 	// if the body contains an integer, then a delay in the response is introduced
 	delay, err := strconv.Atoi(body)
 	if err != nil {
@@ -37,12 +38,19 @@ func echo(ctx context.Context, event events.APIGatewayWebsocketProxyRequest, sto
 	time.Sleep(time.Duration(delay) * time.Second)
 
 	connections, err := store.GetConnectionIDs(ctx)
+	if err != nil {
+		log.Fatalln("Unable to get connections", err.Error())
+	}
 	for _, conn := range connections {
 		input := &apigatewaymanagementapi.PostToConnectionInput{
 			ConnectionId: aws.String(conn),
 			Data: []byte(resp),
 		}
+
 		_, err = apigateway.PostToConnection(input)
+		if err != nil {
+			log.Println("ERROR while sending message to a client", err.Error())
+		}
 	}
 	return nil
 }
